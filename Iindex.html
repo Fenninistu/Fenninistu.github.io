@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Terra-Circular | Final Polish</title>
+    
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+    <style>
+        :root {
+            --accent-color: #FF3B30;
+            --accent-underground: #FF9500;
+            --transition-speed: 0.5s;
+            
+            /* Theme Variables */
+            --bg-color: #f0f0f0;
+            --text-main: #111111;
+            --text-sub: #444444;
+            --panel-bg: rgba(255, 255, 255, 0.9);
+            --sidebar-bg: rgba(255, 255, 255, 0.95);
+            --header-bg: linear-gradient(to bottom, rgba(255,255,255,0.95), transparent);
+            --btn-bg: #ffffff;
+            --border-color: #ddd;
+            --shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111111;
+            --text-main: #ffffff;
+            --text-sub: #cccccc;
+            --panel-bg: rgba(30, 30, 30, 0.9);
+            --sidebar-bg: rgba(20, 20, 20, 0.95);
+            --header-bg: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            --btn-bg: #333333;
+            --border-color: #444;
+            --shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', 'Noto Sans TC', sans-serif; background-color: var(--bg-color); color: var(--text-main); transition: background-color var(--transition-speed), color var(--transition-speed); -webkit-tap-highlight-color: transparent; }
+        
+        #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 80%, #F0F0F0 100%); transition: opacity 1s; }
+        
+        #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; }
+        
+        /* Top Bar */
+        .top-bar { pointer-events: auto; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--header-bg); transition: background var(--transition-speed); z-index: 20;}
+        .header h1 { font-weight: 900; font-size: 1.5rem; margin: 0; letter-spacing: -1px; text-transform: uppercase; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
+        .header h1 span { color: var(--accent-color); }
+        
+        .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+        
+        /* Buttons */
+        .btn-icon, .layer-btn, .toggle-sb-btn { 
+            background: var(--btn-bg); color: var(--text-main); border: 1px solid var(--border-color); 
+            padding: 8px 12px; border-radius: 8px; cursor: pointer; 
+            font-family: inherit; font-size: 0.85rem; font-weight: 600; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            outline: none; display: flex; align-items: center; gap: 5px; 
+        }
+        .layer-btn.active { background: var(--text-main); color: var(--bg-color); border-color: var(--text-main); }
+        .btn-icon:hover, .layer-btn:hover, .toggle-sb-btn:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .toggle-sb-btn.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
+
+        /* Sidebar */
+        #sidebar {
+            position: absolute; top: 0; right: 0; bottom: 0;
+            width: 30%; min-width: 320px; max-width: 450px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid var(--border-color);
+            box-shadow: -5px 0 30px rgba(0,0,0,0.15);
+            padding: 80px 30px 30px 30px; 
+            overflow-y: auto;
+            transform: translateX(100%); /* Default collapsed */
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: auto;
+            z-index: 15;
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+        
+        #sidebar.open { transform: translateX(0); }
+        
+        /* Sidebar Animations */
+        .sb-section { margin-bottom: 40px; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+        #sidebar.open .sb-section { opacity: 1; transform: translateY(0); }
+        /* Staggered delay */
+        #sidebar.open .sb-section:nth-child(1) { transition-delay: 0.1s; }
+        #sidebar.open .sb-section:nth-child(2) { transition-delay: 0.2s; }
+        #sidebar.open .sb-section:nth-child(3) { transition-delay: 0.3s; }
+        #sidebar.open .sb-section:nth-child(4) { transition-delay: 0.4s; }
+        #sidebar.open .sb-section:nth-child(5) { transition-delay: 0.5s; }
+
+        .sb-title { font-size: 1.2rem; font-weight: 900; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; color: var(--text-main); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+        .sb-title .material-symbols-outlined { font-size: 1.5rem; color: var(--accent-color); }
+        .sb-text { color: var(--text-sub); margin-bottom: 15px; text-align: justify;}
+        .sb-highlight { background: rgba(255, 59, 48, 0.1); padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent-color); margin: 15px 0; }
+        .sb-list { list-style: none; padding: 0; }
+        .sb-list li { margin-bottom: 15px; display: flex; gap: 10px; }
+        .sb-list .icon { color: var(--accent-color); }
+        .sb-chart { background: var(--btn-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-top: 10px; }
+        .sb-chart-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; font-weight: 600; }
+        .sb-footer { font-size: 0.7rem; color: #888; border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 40px; }
+
+        /* Mini Detail Panel (Floating) */
+        #detail-panel {
+            position: absolute; bottom: 40px; left: 30px; width: 320px;
+            background: var(--panel-bg); backdrop-filter: blur(15px);
+            padding: 25px; border-radius: 20px; border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            transform: translateY(150%); transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+            pointer-events: auto; z-index: 16;
+        }
+        #detail-panel.active { transform: translateY(0); }
+
+        .panel-tag { font-size: 0.7rem; font-weight: 900; color: var(--accent-color); margin-bottom: 5px; display: block; letter-spacing: 1px;}
+        .panel-title { font-size: 1.4rem; font-weight: 800; margin-bottom: 10px; line-height: 1.2;}
+        .panel-desc { font-size: 0.9rem; color: var(--text-sub); line-height: 1.6; }
+
+        /* Floating Hint Animation */
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .interaction-hint {
+            position: absolute; bottom: 100px; left: 30px;
+            font-size: 0.8rem; color: var(--text-sub); opacity: 0.7;
+            animation: float 3s ease-in-out infinite; pointer-events: none;
+            display: flex; align-items: center; gap: 5px;
+            transition: opacity 0.3s;
+        }
+        #detail-panel.active ~ .interaction-hint { opacity: 0; }
+
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s; }
+        .spinner { width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--accent-color); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        @media (max-width: 768px) {
+            #sidebar { width: 100%; }
+            .top-bar { flex-wrap: wrap; gap: 10px; }
+            .controls { width: 100%; justify-content: space-between; }
+            .interaction-hint { bottom: 20px; left: 50%; transform: translateX(-50%); width: max-content; animation: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <div style="font-weight: 700; font-size: 0.9rem; letter-spacing: 1px;">SYSTEM LOADING...</div>
+    </div>
+
+    <div id="ui-layer">
+        <div class="top-bar">
+            <div class="header">
+                <h1>Terra<span>.</span>Circular</h1>
+            </div>
+            <div class="controls">
+                <button class="toggle-sb-btn" onclick="toggleSidebar()">
+                    <span class="material-symbols-outlined">menu_book</span> 論文
+                </button>
+                <button class="layer-btn active" id="btn-surface" onclick="switchLayer('surface')">🏙️ 地上</button>
+                <button class="layer-btn" id="btn-underground" onclick="switchLayer('underground')">🚇 地下</button>
+                <button class="btn-icon" id="theme-toggle">🌙</button>
+            </div>
+        </div>
+
+        <!-- 3D Object Detail Popup -->
+        <div id="detail-panel">
+            <span class="panel-tag" id="p-tag">ZONE</span>
+            <div class="panel-title" id="p-title">TITLE</div>
+            <div class="panel-desc" id="p-desc">Description.</div>
+        </div>
+
+        <div class="interaction-hint">
+            <span class="material-symbols-outlined" style="font-size: 1rem;">touch_app</span> 點擊物體查看詳情
+        </div>
+
+        <!-- Right Sidebar with Content -->
+        <div id="sidebar">
+            <div class="sb-section">
+                <h2 class="sb-title"><span class="material-symbols-outlined">warning</span> 引言：城市食物系统的线性危机</h2>
+                <p class="sb-text">我们的现代城市建立在一个根本性断裂的食物系统之上。这是一个单向的、线性的“获取-制造-丢弃”模式 [1]。我们从遥远的土地上开采养分，将其运入城市消费，然后将产生的“废物”丢弃到垃圾填埋场。</p>
+                <div class="sb-highlight">
+                    <strong>后果灾难性：</strong>全球1/3食物被浪费，造成每年1万亿美元损失及8-10%温室气体排放。城市家庭环节占浪费的60%。
+                </div>
+            </div>
+
+            <div class="sb-section">
+                <h2 class="sb-title"><span class="material-symbols-outlined">link_off</span> 问题界定</h2>
+                <ul class="sb-list">
+                    <li>
+                        <span class="material-symbols-outlined icon">remove_shopping_cart</span>
+                        <div><strong>消费环节 (无序终端)：</strong>超市过度采购导致30%丢弃，家庭囤积导致腐坏。</div>
+                    </li>
+                    <li>
+                        <span class="material-symbols-outlined icon">compost</span>
+                        <div><strong>农业环节 (断裂循环)：</strong>依赖化肥，而城市富含养分的厨余却被填埋，循环断裂。</div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="sb-section">
+                <h2 class="sb-title"><span class="material-symbols-outlined">flight_takeoff</span> 解决方案 (一)：空中正向物流</h2>
+                <p class="sb-text">重构“消费”的无人机网络。用“按需配送”彻底取代“库存零售”。</p>
+                <div class="sb-chart">
+                    <div class="sb-chart-item"><span class="material-symbols-outlined">storefront</span> 1. 消除零售浪费：即时收获，零库存。</div>
+                    <div class="sb-chart-item"><span class="material-symbols-outlined">kitchen</span> 2. 减少家庭浪费：按需购买，无需囤积。</div>
+                    <div class="sb-chart-item"><span class="material-symbols-outlined">smart_toy</span> 3. AI需求规划：精准种植，防止过剩。</div>
+                </div>
+            </div>
+
+            <div class="sb-section">
+                <h2 class="sb-title"><span class="material-symbols-outlined">settings_backup_restore</span> 解决方案 (二)：地下反向物流</h2>
+                <p class="sb-text">闭合“农业”的养分循环。自动化地下运输系统将城市有机废物转化为农业资源。</p>
+                <ul class="sb-list">
+                    <li><span class="material-symbols-outlined icon">recycling</span> <strong>家庭端：</strong>Mill智能厨余桶将垃圾乾燥粉碎。</li>
+                    <li><span class="material-symbols-outlined icon">conveyor_belt</span> <strong>运输：</strong>地下氣動/軌道系统自动收集粉末。</li>
+                    <li><span class="material-symbols-outlined icon">science</span> <strong>转化：</strong>在再生基地转化为肥料与能源。</li>
+                </ul>
+            </div>
+
+            <div class="sb-section">
+                <h2 class="sb-title"><span class="material-symbols-outlined">hub</span> 整合：再生种植基地</h2>
+                <p class="sb-text">城市的心肺。空中物流的起点与地下物流的终点在此汇合。通过厌氧消化实现能源自给与肥料再生。</p>
+                <div class="sb-chart">
+                    <div class="sb-chart-item" style="color:var(--accent-color)"><span class="material-symbols-outlined">loop</span> Terra-Circular 闭环</div>
+                    <div class="sb-chart-item" style="margin-left:10px">↓ 1. 城市消费 & 厨余</div>
+                    <div class="sb-chart-item" style="margin-left:10px">↓ 2. 地下反向物流</div>
+                    <div class="sb-chart-item" style="margin-left:10px">↓ 3. 再生基地 (厌氧消化)</div>
+                    <div class="sb-chart-item" style="margin-left:20px">→ 产出A: 绿色能源</div>
+                    <div class="sb-chart-item" style="margin-left:20px">→ 产出B: 生物肥料</div>
+                    <div class="sb-chart-item" style="margin-left:10px">↑ 4. 再生农业</div>
+                    <div class="sb-chart-item" style="margin-left:10px">↑ 5. 空中正向物流</div>
+                </div>
+            </div>
+            
+            <div class="sb-section">
+                <h2 class="sb-title"><span class="material-symbols-outlined">verified</span> 结论</h2>
+                <p class="sb-text">通过智慧的“设计”，让“废物”这一概念彻底消失。Terra-Circular 创造了一个更具韧性、健康、零碳的城市生态。</p>
+            </div>
+
+            <div class="sb-footer">
+                <p><strong>建造团队:</strong> Benson, Ming, John, Felix, Jenny</p>
+                <p>Plan Fenninistu</p>
+                <p style="margin-top:10px; opacity:0.6">Terra-Circular Project © 2025-2026</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <script>
+        // --- Configuration ---
+        const ZONES_CONFIG = [
+            { id: 'planting', name: '種植樓 I', desc: '垂直農場與太陽能中心。地下連接肥料輸送鐵軌。', x: -30, z: -30, w: 20, h: 25, d: 20, style: 'planting' },
+            { id: 'restaurant', name: '濱海餐廳', desc: '餐飲中心。地下設有廚餘氣動回收口。', x: 20, z: -30, w: 15, h: 6, d: 15, style: 'restaurant' },
+            { id: 'living', name: '高層公寓', desc: '居住區。配備直通地下的氣動垃圾管道。', x: -20, z: 30, w: 30, h: 35, d: 15, style: 'living' },
+            { id: 'station', name: '物質處理站', desc: '循環樞紐。接收氣動管道的廚餘，產出肥料經鐵軌送回種植樓。', x: 30, z: 30, w: 15, h: 8, d: 15, style: 'industrial' }
+        ];
+        const UNDERGROUND_Y = -20;
+        const COLORS = {
+            white: 0xEEEEEE, pink: 0xD06095, dark: 0x334455, blue: 0x3A5F85, asphalt: 0x222222, grass: 0x6B8E23,
+            soil: 0x2c1e1a, tunnel: 0x111111, track: 0x666666, minecart: 0x8D6E63, wasteGreen: 0x76FF03, shaft: 0x444444,
+            rail: 0xaaaaaa, sleeper: 0x3e2723, tube: 0x88ccff, blackFloor: 0x111111
+        };
+
+        let currentTheme = 'light', currentLayer = 'surface';
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let surfaceGroup, undergroundGroup;
+        let drones = [], minecarts = [], capsules = [];
+        let droneCurve; 
+        let sunLight, ambientLight;
+        let streetLights = [], buildingWindows = [];
+
+        function init() {
+            try {
+                const container = document.getElementById('canvas-container');
+                scene = new THREE.Scene();
+                scene.fog = new THREE.FogExp2(0xE0F6FF, 0.008);
+
+                camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 60, 80);
+                
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, logarithmicDepthBuffer: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                container.appendChild(renderer.domElement);
+
+                ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+                scene.add(ambientLight);
+                sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+                sunLight.position.set(-80, 100, 80);
+                sunLight.castShadow = true;
+                sunLight.shadow.mapSize.width = 2048; sunLight.shadow.mapSize.height = 2048;
+                scene.add(sunLight);
+
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true; controls.maxPolarAngle = Math.PI/2 - 0.05; controls.minDistance = 20; controls.maxDistance = 200;
+
+                surfaceGroup = new THREE.Group();
+                undergroundGroup = new THREE.Group();
+                undergroundGroup.visible = false;
+                scene.add(surfaceGroup);
+                scene.add(undergroundGroup);
+
+                buildSurface();
+                buildUnderground();
+
+                raycaster = new THREE.Raycaster();
+                mouse = new THREE.Vector2();
+
+                window.addEventListener('resize', onResize);
+                renderer.domElement.addEventListener('pointerdown', onPointerDown);
+                document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+                setTheme('light');
+
+                setTimeout(() => { document.getElementById('loader').style.opacity=0; setTimeout(()=>document.getElementById('loader').style.display='none',500); }, 1000);
+                animate();
+            } catch (e) { console.error(e); document.getElementById('loader').style.display='none'; }
+        }
+
+        function buildSurface() {
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(300,300), new THREE.MeshLambertMaterial({color: COLORS.grass}));
+            ground.rotation.x = -Math.PI/2; ground.position.y = -0.1; ground.receiveShadow = true;
+            surfaceGroup.add(ground);
+
+            // Black Floor Patch for Living Area
+            const blackZone = ZONES_CONFIG.find(z => z.style === 'living');
+            if (blackZone) {
+                const blackPatch = new THREE.Mesh(new THREE.BoxGeometry(50, 0.15, 40), new THREE.MeshLambertMaterial({color: COLORS.blackFloor}));
+                blackPatch.position.set(blackZone.x, -0.05, blackZone.z);
+                blackPatch.receiveShadow = true;
+                surfaceGroup.add(blackPatch);
+            }
+
+            // Roads
+            const roadMat = new THREE.MeshLambertMaterial({color: COLORS.asphalt, polygonOffset: true, polygonOffsetFactor: 1});
+            const hRoad = new THREE.Mesh(new THREE.BoxGeometry(120,0.2,8), roadMat); hRoad.receiveShadow=true;
+            const hRoad2 = hRoad.clone(); hRoad.position.set(0,0,-20); hRoad2.position.set(0,0,20);
+            const vRoad = new THREE.Mesh(new THREE.BoxGeometry(8,0.2,120), roadMat); vRoad.receiveShadow=true;
+            const vRoad2 = vRoad.clone(); vRoad.position.set(-10,0,0); vRoad2.position.set(40,0,0);
+            surfaceGroup.add(hRoad, hRoad2, vRoad, vRoad2);
+
+            // Street Lights
+            const lampGeo = new THREE.CylinderGeometry(0.15,0.15,6);
+            const lampMat = new THREE.MeshLambertMaterial({color:0x222222});
+            const bulbGeo = new THREE.SphereGeometry(0.4);
+            const bulbMat = new THREE.MeshStandardMaterial({color:0xffffee, emissive:0xffffee, emissiveIntensity:0}); 
+            
+            const placeLamp = (x, z) => {
+                const g = new THREE.Group();
+                const pole = new THREE.Mesh(lampGeo, lampMat); pole.position.y=3; g.add(pole);
+                const arm = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.1, 0.1), lampMat); arm.position.set(0.5, 6, 0); g.add(arm);
+                const bulb = new THREE.Mesh(bulbGeo, bulbMat.clone()); bulb.position.set(1, 5.8, 0); g.add(bulb);
+                const spot = new THREE.SpotLight(0xffaa00, 0, 25, 0.6, 0.5, 1);
+                spot.position.set(1, 6, 0); spot.target.position.set(1, 0, 0); g.add(spot); g.add(spot.target);
+                const point = new THREE.PointLight(0xffaa00, 0, 5); point.position.set(1, 6, 0); g.add(point);
+                g.position.set(x,0,z); surfaceGroup.add(g); streetLights.push({bulb: bulb, spot: spot, point: point});
+            };
+            for(let i=-50; i<=50; i+=25) { if(Math.abs(i)>5) { placeLamp(i, -25); placeLamp(i, 15); } }
+            [-35, -5, 25, 55].forEach(z => { placeLamp(-15, z); placeLamp(45, z); });
+
+            // Buildings
+            const winMat = new THREE.MeshStandardMaterial({color:0x444444, emissive:0xffcc00, emissiveIntensity:0});
+            ZONES_CONFIG.forEach(z => {
+                const geo = new THREE.BoxGeometry(z.w, z.h, z.d);
+                const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: COLORS.white}));
+                mesh.position.set(z.x, z.h/2, z.z); mesh.castShadow = true; mesh.receiveShadow = true;
+                surfaceGroup.add(mesh);
+                const hit = new THREE.Mesh(new THREE.BoxGeometry(z.w*1.1,z.h,z.d*1.1), new THREE.MeshBasicMaterial({visible:false}));
+                hit.position.copy(mesh.position); hit.userData = {type:'building', data: z};
+                surfaceGroup.add(hit);
+
+                if(z.style==='planting') {
+                    const l = new THREE.Mesh(new THREE.BoxGeometry(1.5,z.h,1.5), new THREE.MeshLambertMaterial({color:COLORS.pink}));
+                    l.position.set(z.x-z.w/2, z.h/2, z.z+z.d/2); surfaceGroup.add(l);
+                    const l2 = l.clone(); l2.position.set(z.x-z.w/2, z.h/2, z.z-z.d/2); surfaceGroup.add(l2);
+                    for(let y=4;y<z.h-2;y+=5) { const w=new THREE.Mesh(new THREE.BoxGeometry(z.w+0.5,2,z.d-2), winMat.clone()); w.position.set(z.x,y,z.z); surfaceGroup.add(w); buildingWindows.push(w); }
+                } else if(z.style==='restaurant') {
+                    const r = new THREE.Mesh(new THREE.BoxGeometry(z.w+2,1.5,z.d+2), new THREE.MeshLambertMaterial({color:COLORS.blue}));
+                    r.position.set(z.x, z.h+0.75, z.z); surfaceGroup.add(r);
+                    const glass = new THREE.Mesh(new THREE.BoxGeometry(z.w-2, 3, 1), winMat.clone());
+                    glass.position.set(z.x, 2, z.z+z.d/2+0.1); surfaceGroup.add(glass); buildingWindows.push(glass);
+                } else if(z.style==='living') {
+                    for(let y=4;y<z.h-2;y+=4) { 
+                        const b=new THREE.Mesh(new THREE.BoxGeometry(z.w+1,1,3),new THREE.MeshLambertMaterial({color:COLORS.dark})); b.position.set(z.x,y,z.z+z.d/2+0.5); surfaceGroup.add(b);
+                        const w = new THREE.Mesh(new THREE.BoxGeometry(z.w-2, 2, 1), winMat.clone()); w.position.set(z.x, y+1.5, z.z+z.d/2+0.1); surfaceGroup.add(w); buildingWindows.push(w);
+                    }
+                }
+            });
+
+            // Drones
+            const dPts = [new THREE.Vector3(-30,20,-30), new THREE.Vector3(20,20,-30), new THREE.Vector3(30,20,30), new THREE.Vector3(10,30,35), new THREE.Vector3(-20,45,30), new THREE.Vector3(-35,30,30), new THREE.Vector3(-30,20,-30)];
+            droneCurve = new THREE.CatmullRomCurve3(dPts, true);
+            const dGeo = new THREE.Group();
+            const dBody = new THREE.Mesh(new THREE.BoxGeometry(1,0.3,1), new THREE.MeshStandardMaterial({color:0x222222})); dGeo.add(dBody);
+            const dArm = new THREE.Mesh(new THREE.BoxGeometry(3,0.05,0.2), new THREE.MeshStandardMaterial({color:0x444444})); dGeo.add(dArm);
+            const dArm2 = dArm.clone(); dArm2.rotation.y=Math.PI/2; dGeo.add(dArm2);
+            const hit = new THREE.Mesh(new THREE.SphereGeometry(4), new THREE.MeshBasicMaterial({visible:false})); hit.userData={type:'drone'}; dGeo.add(hit);
+            for(let i=0; i<5; i++){
+                const g = dGeo.clone(); g.scale.set(1.3,1.3,1.3); surfaceGroup.add(g); drones.push({mesh:g, progress:i*0.2, speed:0.001});
+            }
+        }
+
+        function buildUnderground() {
+            const soil = new THREE.Mesh(new THREE.PlaneGeometry(400,400), new THREE.MeshLambertMaterial({color: COLORS.soil}));
+            soil.rotation.x = -Math.PI/2; soil.position.y = UNDERGROUND_Y - 1; soil.receiveShadow = true;
+            undergroundGroup.add(soil);
+
+            const bNodes = {};
+            ZONES_CONFIG.forEach(z => {
+                const room = new THREE.Mesh(new THREE.BoxGeometry(12, 5, 12), new THREE.MeshLambertMaterial({color: 0x555555}));
+                room.position.set(z.x, UNDERGROUND_Y, z.z); undergroundGroup.add(room);
+                const hit = new THREE.Mesh(new THREE.BoxGeometry(12,6,12), new THREE.MeshBasicMaterial({visible:false}));
+                hit.position.copy(room.position); hit.userData = {type: 'u_node', name: z.name+' 地下轉運站', desc: '連接地上 '+z.name+' 的垂直井與地下物流網。'};
+                undergroundGroup.add(hit);
+                const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, Math.abs(UNDERGROUND_Y)+2, 8), new THREE.MeshLambertMaterial({color: COLORS.shaft}));
+                shaft.position.set(z.x, UNDERGROUND_Y/2 + 1, z.z); undergroundGroup.add(shaft);
+                bNodes[z.id] = new THREE.Vector3(z.x, UNDERGROUND_Y, z.z);
+            });
+
+            const createPath = (points) => { const path = new THREE.CurvePath(); for(let i=0; i<points.length-1; i++) path.add(new THREE.LineCurve3(points[i], points[i+1])); return path; };
+            
+            // Tube Paths (Waste)
+            const tWaste1 = createPath([bNodes['living'], bNodes['station']]);
+            const tWaste2 = createPath([bNodes['restaurant'], new THREE.Vector3(20, UNDERGROUND_Y, 30), bNodes['station']]);
+            // Rail Path (Fertilizer)
+            const tFert = createPath([bNodes['station'], new THREE.Vector3(30, UNDERGROUND_Y, -30), bNodes['planting']]);
+
+            // Build Tubes
+            [tWaste1, tWaste2].forEach(c => {
+                const tube = new THREE.Mesh(new THREE.TubeGeometry(c, 64, 1.5, 8, false), new THREE.MeshPhongMaterial({color:COLORS.tube, transparent:true, opacity:0.3, side:THREE.DoubleSide}));
+                undergroundGroup.add(tube);
+                const hit = new THREE.Mesh(new THREE.TubeGeometry(c, 10, 2, 4, false), new THREE.MeshBasicMaterial({visible:false}));
+                hit.userData = {type:'tube'}; undergroundGroup.add(hit);
+                // Capsules
+                const capGeo = new THREE.CylinderGeometry(0.8, 0.8, 2, 8); capGeo.rotateX(Math.PI/2);
+                for(let i=0; i<2; i++){
+                    const cap = new THREE.Mesh(capGeo, new THREE.MeshLambertMaterial({color:0xCCCCCC}));
+                    undergroundGroup.add(cap); capsules.push({mesh:cap, curve:c, progress:i*0.4, speed:0.003});
+                }
+            });
+
+            // Build Rail
+            const c = tFert;
+            const points = c.getPoints(Math.floor(c.getLength()));
+            const railMat = new THREE.MeshLambertMaterial({color: COLORS.rail});
+            const sleeperMat = new THREE.MeshLambertMaterial({color: COLORS.sleeper});
+            for(let i=0; i<points.length-1; i++) {
+                const p1 = points[i]; const p2 = points[i+1];
+                const vec = new THREE.Vector3().subVectors(p2, p1);
+                const center = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+                const angle = Math.atan2(vec.x, vec.z);
+                const r1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, vec.length()), railMat); r1.position.set(center.x - 0.6, UNDERGROUND_Y+0.2, center.z); r1.rotation.y = angle;
+                const r2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, vec.length()), railMat); r2.position.set(center.x + 0.6, UNDERGROUND_Y+0.2, center.z); r2.rotation.y = angle;
+                undergroundGroup.add(r1, r2);
+                if(i%2===0) {
+                    const sl = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.15, 0.6), sleeperMat); sl.position.set(center.x, UNDERGROUND_Y+0.1, center.z); sl.rotation.y = angle;
+                    undergroundGroup.add(sl);
+                }
+            }
+            // Minecart
+            const createMinecart = () => {
+                const g = new THREE.Group();
+                const bodyMat = new THREE.MeshLambertMaterial({color: COLORS.minecart});
+                const base = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.2, 3.4), bodyMat); base.position.y = 0.5; g.add(base);
+                const w1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.2, 3.4), bodyMat); w1.position.set(1, 1.1, 0); g.add(w1);
+                const w2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.2, 3.4), bodyMat); w2.position.set(-1, 1.1, 0); g.add(w2);
+                const w3 = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 0.2), bodyMat); w3.position.set(0, 1.1, 1.6); g.add(w3);
+                const w4 = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 0.2), bodyMat); w4.position.set(0, 1.1, -1.6); g.add(w4);
+                const load = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 3.0), new THREE.MeshLambertMaterial({color: COLORS.wasteGreen})); load.position.y = 0.9; g.add(load);
+                const hit = new THREE.Mesh(new THREE.BoxGeometry(4,4,5), new THREE.MeshBasicMaterial({visible:false})); hit.userData={type:'minecart'}; g.add(hit);
+                return g;
+            };
+            for(let i=0; i<2; i++){
+                const m = createMinecart(); undergroundGroup.add(m);
+                minecarts.push({mesh:m, curve:c, progress:i*0.4, speed:0.002});
+            }
+
+            Object.values(bNodes).forEach(pos => {
+                const pl = new THREE.PointLight(0xffaa00, 0.6, 40); pl.position.copy(pos).add(new THREE.Vector3(0, 5, 0)); undergroundGroup.add(pl);
+            });
+        }
+
+        function switchLayer(layer) {
+            if(currentLayer === layer) return;
+            currentLayer = layer;
+            document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-'+layer).classList.add('active');
+            document.getElementById('detail-panel').classList.remove('active');
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99;opacity:0;transition:opacity 0.8s;pointer-events:none;';
+            document.body.appendChild(overlay);
+            setTimeout(()=>overlay.style.opacity=1, 10);
+            setTimeout(() => {
+                if(layer === 'surface') {
+                    surfaceGroup.visible = true; undergroundGroup.visible = false;
+                    setTheme(currentTheme); controls.maxPolarAngle = Math.PI/2 - 0.05; controls.minDistance = 20;
+                } else {
+                    surfaceGroup.visible = false; undergroundGroup.visible = true;
+                    document.getElementById('canvas-container').style.background = '#1a100e';
+                    scene.fog.color.setHex(0x1a100e);
+                    camera.position.set(0, 40, 40); controls.maxPolarAngle = Math.PI - 0.1; controls.minDistance = 10;
+                }
+                overlay.style.opacity = 0;
+                setTimeout(()=>overlay.remove(), 800);
+            }, 800);
+        }
+
+        function setTheme(mode) {
+            currentTheme = mode; document.documentElement.setAttribute('data-theme', mode);
+            document.getElementById('theme-toggle').innerText = mode === 'light' ? '🌙' : '☀️';
+            const isDark = mode === 'dark';
+            streetLights.forEach(l => { l.bulb.material.emissiveIntensity = isDark ? 1 : 0; l.spot.intensity = isDark ? 0.8 : 0; l.point.intensity = isDark ? 0.8 : 0; });
+            buildingWindows.forEach(w => w.material.emissiveIntensity = isDark ? 1 : 0);
+            if(currentLayer === 'surface') {
+                const bg = document.getElementById('canvas-container');
+                if(mode === 'light') { bg.style.background = 'linear-gradient(to bottom, #87CEEB, #E0F6FF)'; scene.fog.color.setHex(0xE0F6FF); sunLight.intensity = 1.2; ambientLight.intensity = 0.8; }
+                else { bg.style.background = 'linear-gradient(to bottom, #000022, #111133)'; scene.fog.color.setHex(0x050510); sunLight.intensity = 0.1; ambientLight.intensity = 0.2; }
+            }
+        }
+        function toggleTheme() { setTheme(currentTheme==='light'?'dark':'light'); }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function onPointerDown(e) {
+            if(e.target.closest('#sidebar, #detail-panel, .top-bar, .toggle-sb-btn')) return;
+            const rect = renderer.domElement.getBoundingClientRect(); mouse.x = ((e.clientX-rect.left)/rect.width)*2-1; mouse.y = -((e.clientY-rect.top)/rect.height)*2+1;
+            raycaster.setFromCamera(mouse, camera);
+            const group = currentLayer === 'surface' ? surfaceGroup : undergroundGroup;
+            const intersects = raycaster.intersectObjects(group.children, true);
+            if(intersects.length > 0) {
+                let target = intersects[0].object;
+                while(target && !target.userData.type && target.parent !== group) target = target.parent;
+                if(target && target.userData.type) {
+                    const data = target.userData;
+                    const title = document.getElementById('p-title');
+                    const desc = document.getElementById('p-desc');
+                    
+                    // Camera Animation (Focus)
+                    const targetPos = new THREE.Vector3().copy(target.position);
+                    if(currentLayer === 'surface') targetPos.y += 20; else targetPos.y += 10;
+                    new TWEEN.Tween(camera.position).to({ x: targetPos.x + 20, y: targetPos.y + 20, z: targetPos.z + 20 }, 1000).easing(TWEEN.Easing.Cubic.Out).start();
+                    new TWEEN.Tween(controls.target).to({ x: target.position.x, y: target.position.y, z: target.position.z }, 1000).easing(TWEEN.Easing.Cubic.Out).start();
+
+                    if(data.type === 'building') { title.innerText = data.data.name; desc.innerText = data.data.desc; }
+                    else if(data.type === 'drone') { title.innerText = '無人機物流'; desc.innerText = '自動化空中配送。'; }
+                    else if(data.type === 'minecart') { title.innerText = '地下礦車'; desc.innerText = '肥料運輸單元，運行於鐵軌之上。'; }
+                    else if(data.type === 'tube') { title.innerText = '氣動管道'; desc.innerText = '廚餘高速真空吸入系統。'; }
+                    else if(data.type === 'u_node') { title.innerText = data.name; desc.innerText = data.desc; }
+                    else return;
+                    document.getElementById('detail-panel').classList.add('active');
+                    return;
+                }
+            }
+            document.getElementById('detail-panel').classList.remove('active');
+        }
+        function onResize() { camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); }
+        function animate(time) {
+            requestAnimationFrame(animate); TWEEN.update(time); controls.update();
+            if(currentLayer === 'surface') {
+                drones.forEach(d => { d.progress=(d.progress+d.speed)%1; d.mesh.position.copy(droneCurve.getPointAt(d.progress)); d.mesh.lookAt(droneCurve.getPointAt((d.progress+0.01)%1)); });
+            } else {
+                minecarts.forEach(m => { m.progress=(m.progress+m.speed)%1; m.mesh.position.copy(m.curve.getPointAt(m.progress)); m.mesh.lookAt(m.curve.getPointAt((m.progress+0.01)%1)); });
+                capsules.forEach(c => { c.progress=(c.progress+c.speed)%1; c.mesh.position.copy(c.curve.getPointAt(c.progress)); c.mesh.lookAt(c.curve.getPointAt((c.progress+0.01)%1)); c.mesh.rotateX(Math.PI/2); });
+            }
+            renderer.render(scene, camera);
+        }
+        init();
+    </script>
+</body>
+</html>
